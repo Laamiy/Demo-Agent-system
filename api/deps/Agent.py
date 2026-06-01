@@ -1,7 +1,10 @@
-import json
 import re
+import json
 import torch
+from typing import List 
+from dataclasses import asdict
 from api.common.logger import logger
+from api.deps.schema import chatModel
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 
 class QwenModelAgent:
@@ -33,16 +36,17 @@ class QwenModelAgent:
         self.model.eval()
         logger.info("Model loaded. VRAM used: ~%.2f GB", torch.cuda.memory_allocated() / 1e9)
     
-    def chat(self, messages: list, tools: list = None, max_new_tokens: int = 512) -> str:
+    def chat(self, messages: List[chatModel], tools: list = None, max_new_tokens: int = 512) -> str:
         """Generate response from messages. Returns raw text (may contain <tool_call>)."""
         
-        text = self.tokenizer.apply_chat_template(
-            messages,
-            tools=tools,
-            tokenize=False,
-            add_generation_prompt=True
-        )
+        messages = [asdict(mess) for mess in messages ]
         
+        text = self.tokenizer.apply_chat_template(
+                                                        messages,
+                                                        tools=tools,
+                                                        tokenize=False,
+                                                        add_generation_prompt=True
+                                                    )
         inputs = self.tokenizer(text, return_tensors="pt").to(self.model.device)
         
         with torch.no_grad():

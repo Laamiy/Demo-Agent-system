@@ -1,11 +1,13 @@
 import uuid
 import random
+import json 
+import re 
 import subprocess
 from typing import Annotated
 from fastapi import APIRouter, Depends
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-
+from typing import List 
 from api.deps.state import get_agent
 from api.deps.Agent import QwenModelAgent
 from api.entities.user import User, Order, Restaurant, Ride  
@@ -145,14 +147,14 @@ async def book_ride(session: AsyncSession, destination: str, pickup: str = None,
         try:
             uid = uuid.UUID(user_id)
         except ValueError:
-            user_stmt = select(User).where(User.username == user_id)
+            user_stmt = select(User).where(User.uid == user_id)
             res = await session.execute(user_stmt)
             user = res.scalar_one_or_none()
             if user:
                 uid = user.uid
 
     price = random.randint(5000, 20000)
-    ride_id = f"RIDE-{random.randint(1000, 9999)}"
+    ride_id = uuid.uuid4()#f"RIDE-{random.randint(1000, 9999)}"
 
     ride = Ride(
         ride_id=ride_id,
@@ -194,3 +196,77 @@ def control_keyboard(state: str):
         }
     except subprocess.CalledProcessError as e:
         return {"status": "error", "message": e.stderr}
+
+def _normalize_call(data: dict) -> dict:
+    """Normalize Qwen tool-call formats."""
+    name = data.get("name")
+    if not name and "function" in data:
+        name = data["function"].get("name")
+
+    args = data.get("arguments") or data.get("parameters") or {}
+    if "function" in data and isinstance(data["function"], dict):
+        args = data["function"].get("arguments", args)
+
+    return {"name": name, "arguments": args}
+
+
+def _extract_tool_calls(text: str) -> List[dict]:
+    """
+    Extract tool calls from raw model output.
+    Handles both closed <tool_call>...</tool_call> and unclosed tags.
+    """
+    calls = []
+
+    for match in re.finditer(r'<tool_call>(.*?)</tool_call>', text, re.DOTALL):
+        try:
+            data = json.loads(match.group(1).strip())
+            calls.append(_normalize_call(data))
+            
+        except (json.JSONDecodeError, KeyError):
+            continue
+
+    if calls:
+        return calls
+
+    # Unclosed tag (model outputs <tool_call>{"name":...} without closing)
+    for match in re.finditer(r'<tool_call>\s*(\{.*)', text, re.DOTALL):
+        
+        json_str = match.group(1)
+        brace_count = 0
+        end_idx = 0
+        in_string = False
+        escape_next = False
+
+        for i, ch in enumerate(json_str):
+            if escape_next:
+                escape_next = False
+                continue
+            if ch == '\\':
+                escape_next = True
+                continue
+            if ch == '"' and not in_string:
+                in_string = True
+            elif ch == '"' and in_string:
+                in_string = False
+            elif not in_string:
+                if ch == '{':
+                    brace_count += 1
+                elif ch == '}':
+                    brace_count -= 1
+                    if brace_count == 0:
+                        end_idx = i + 1
+                        break
+
+        if end_idx > 0:
+            try:
+                data = json.loads(json_str[:end_idx])
+                calls.append(_normalize_call(data))
+            except (json.JSONDecodeError, KeyError):
+                continue
+
+    return calls
+
+
+
+
+
