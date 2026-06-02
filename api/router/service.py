@@ -11,8 +11,8 @@ from typing import List
 from api.deps.state import get_agent
 from api.deps.Agent import QwenModelAgent
 from api.entities.user import User, Order, Restaurant, Ride  
-
-
+from sqlalchemy import func
+from api.common.logger import logger 
 router = APIRouter()
 Agent = Annotated[QwenModelAgent, Depends(get_agent)]
 
@@ -24,7 +24,8 @@ async def get_user_info(session: AsyncSession, username: str = None, phone: str 
 
     stmt = select(User)
     if username:
-        stmt = stmt.where(User.username == username)
+        logger.info("current username : %s " , username)
+        stmt = stmt.where(func.lower(User.username) == username.lower())
     else:
         stmt = stmt.where(User.phone == phone)
 

@@ -12,5 +12,6 @@ dependencies = [
     "pydantic-settings>=2.14.1",
     "sqlalchemy>=2.0.50",
     "transformers>=5.9.0",
+    "unsloth>=2025.9.5",
     "uvicorn>=0.48.0",
 ]

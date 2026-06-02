@@ -38,8 +38,11 @@ class QwenModelAgent:
     
     def chat(self, messages: List[chatModel], tools: list = None, max_new_tokens: int = 512) -> str:
         """Generate response from messages. Returns raw text (may contain <tool_call>)."""
-        
-        messages = [asdict(mess) for mess in messages ]
+        logger.info("type of  %s " , type(messages[0]))
+        messages = [ m if isinstance(m, chatModel) else chatModel(**m) for m in messages]
+        logger.info("type of  %s " , type(messages[0]))
+
+        # messages = [asdict(mess) for mess in messages ]
         
         text = self.tokenizer.apply_chat_template(
                                                         messages,
