@@ -9,6 +9,6 @@ models
 .python-version
 data_loading.log
 .env
-
+dataset/data
 # Virtual environments
 .venv

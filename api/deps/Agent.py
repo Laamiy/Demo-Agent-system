@@ -2,7 +2,6 @@ import re
 import json
 import torch
 from typing import List 
-from dataclasses import asdict
 from api.common.logger import logger
 from api.deps.schema import chatModel
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
@@ -38,9 +37,7 @@ class QwenModelAgent:
     
     def chat(self, messages: List[chatModel], tools: list = None, max_new_tokens: int = 512) -> str:
         """Generate response from messages. Returns raw text (may contain <tool_call>)."""
-        logger.info("type of  %s " , type(messages[0]))
         messages = [ m if isinstance(m, chatModel) else chatModel(**m) for m in messages]
-        logger.info("type of  %s " , type(messages[0]))
 
         # messages = [asdict(mess) for mess in messages ]
         

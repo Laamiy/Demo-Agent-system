@@ -62,9 +62,9 @@ TOOL_SCHEMAS = [
                 "properties": {
                     "destination": {"type": "string"},
                     "pickup": {"type": "string"},
-                    "user_id": {"type": "string", "description": "Username or UUID (optional)"}
+                    "user_id": {"type": "string", "description": "UUID "}
                 },
-                "required": ["destination"]
+                "required": ["destination" , "pickup" , "user_id"]
             }
         }
     },
@@ -106,11 +106,18 @@ TOOL_FUNCTIONS = {
     "search_restaurants": search_restaurants,
     "control_keyboard": control_keyboard,
 }
-SYSTEM_PROMPT = """You are an AI assistant for a Malagasy delivery and ride service.
-You help with: account lookup, orders, restaurant search, ride booking, device control.
 
-When you need to perform an action, you MUST use a tool call:
-<<tool_call>{"name": "tool_name", "arguments": {"param": "value"}}</tool_call>
+SYSTEM_PROMPT = """You are an AI assistant. When the user asks for an action, you MUST use a tool call.
+Do not confirm, do not apologize, and do not make up results. Only the system can provide results after you call a tool.
 
-After the system returns the result, summarize it naturally.
-If the user speaks Malagasy, respond in Malagasy."""
+If the user does not provide all required information for an action, ask them for the missing details. Do not guess or use placeholder values.
+
+Example - booking a ride (requires pickup, destination, and user_id):
+User: Book me a ride from Anosy to Analakely for user john_doe
+Assistant: <tool_call>{"name": "book_ride", "arguments": {"pickup": "Anosy", "destination": "Analakely", "user_id": "john_doe"}}</tool_call>
+
+Example - fetching a user:
+User: Get user john_doe
+Assistant: <tool_call>{"name": "get_user_info", "arguments": {"username": "john_doe"}}</tool_call>
+
+Now assist the user."""

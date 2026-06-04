@@ -11,12 +11,14 @@ from typing import List
 from api.deps.state import get_agent
 from api.deps.Agent import QwenModelAgent
 from api.entities.user import User, Order, Restaurant, Ride  
-from sqlalchemy import func
+from sqlalchemy import func , or_
 from api.common.logger import logger 
+from sqlalchemy.ext.asyncio import AsyncSession
 router = APIRouter()
 Agent = Annotated[QwenModelAgent, Depends(get_agent)]
-
+# db_session = Annotated[AsyncGenerator[AsyncSession,None] , Depends(get_connection)]
 # ─── REAL TOOL IMPLEMENTATIONS (hit your actual DB) ───────
+
 
 async def get_user_info(session: AsyncSession, username: str = None, phone: str = None):
     if not username and not phone:
@@ -80,7 +82,7 @@ async def place_order(session: AsyncSession, restaurant_id: str, items: list, us
     try:
         uid = uuid.UUID(user_id)
     except ValueError:
-        user_stmt = select(User).where(User.username == user_id)
+        user_stmt = select(User).where(User.user_id == user_id)
         res = await session.execute(user_stmt)
         user = res.scalar_one_or_none()
         if not user:
@@ -108,7 +110,7 @@ async def place_order(session: AsyncSession, restaurant_id: str, items: list, us
         currency="MGA",
     )
     session.add(new_order)
-    await session.commit()
+    # await session.commit()
 
     return {
         "order_id": order_id,
@@ -142,18 +144,20 @@ async def search_restaurants(session: AsyncSession, query: str):
     }
 
 
-async def book_ride(session: AsyncSession, destination: str, pickup: str = None, user_id: str = None):
+async def book_ride(session: AsyncSession, destination: str, pickup: str , user_id: str = None ) :#, username : str = None ):
     uid = None
     if user_id:
         try:
             uid = uuid.UUID(user_id)
         except ValueError:
-            user_stmt = select(User).where(User.uid == user_id)
+            user_stmt = select(User).where( User.uid == user_id  , 
+                                           #     func.lower(User.username) == (username or "").lower()
+                                           )
             res = await session.execute(user_stmt)
             user = res.scalar_one_or_none()
             if user:
                 uid = user.uid
-
+ # Just set price to random for demo only anyway
     price = random.randint(5000, 20000)
     ride_id = uuid.uuid4()#f"RIDE-{random.randint(1000, 9999)}"
 
@@ -166,11 +170,12 @@ async def book_ride(session: AsyncSession, destination: str, pickup: str = None,
         price=price,
         currency="MGA",
     )
+    logger.info("current ride %s to %s " , ride.pickup , ride.destination)
     session.add(ride)
     await session.commit()
 
     return {
-        "ride_id": ride_id,
+        "ride_id": str(ride_id),
         "status": "confirmed",
         "destination": destination,
         "pickup": pickup or "Current location",

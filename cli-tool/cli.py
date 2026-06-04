@@ -29,6 +29,7 @@ class AgentCLI:
             resp = self.client.post(f"{self.base_url}{endpoint}", json=payload)
             resp.raise_for_status()
             return resp.json()
+        
         except httpx.ConnectError:
             logger.error("Cannot connect to backend. Is the server running?")
             return None
@@ -82,7 +83,7 @@ class AgentCLI:
                 if tr.get("error"):
                     logger.info(f"  - {tr['tool']}: ERROR - {tr['error']}")
                 else:
-                    result = json.dumps(tr.get("result", {}), indent=2)[:200]
+                    result = json.dumps(tr.get("result", {}), indent=2)#[:200]
                     logger.info(f"  - {tr['tool']}: {result}")
 
     def list_tools(self):
