@@ -4,6 +4,7 @@ from typing import Tuple, Optional, Dict, Any
 from dataclasses import dataclass
 from functools import lru_cache
 import numpy as np 
+
 @dataclass
 class LanguageProfile:
     """Statistical language profile for Malagasy text"""
@@ -14,20 +15,20 @@ class LanguageProfile:
     def __post_init__(self):
         # Malagasy common words (preserved from web text)
         self.malagasy_markers = {
-            "ny", "amin", "ho", "dia", "fa", "ao", "izany", "reo", "isa", 
-            "noho", "tamin", "mba", "etsy", "araka", "mbola", "avy", "manao",
-            "misy", "tao", "tsy", "efa", "tena", "mbola", "satria", "kosa",
-            "ary", "sady", "kanefa", "raha", "ka", "fa", "nefa", "faingana",
-            "ankehitriny", "raha", "satria", "mba", "indray", "fotsiny",
-        }
+                                    "ny", "amin", "ho", "dia", "fa", "ao", "izany", "reo", "isa", 
+                                    "noho", "tamin", "mba", "etsy", "araka", "mbola", "avy", "manao",
+                                    "misy", "tao", "tsy", "efa", "tena", "mbola", "satria", "kosa",
+                                    "ary", "sady", "kanefa", "raha", "ka", "fa", "nefa", "faingana",
+                                    "ankehitriny", "raha", "satria", "mba", "indray", "fotsiny",
+                                }
         
         # French words that naturally appear in Malagasy (not contamination)
         self.french_markers = {
-            "mais", "donc", "puis", "avec", "pour", "chez", "sans", "par",
-            "dans", "sur", "sous", "très", "bien", "oui", "non", "merci",
-            "bonjour", "aujourd", "demain", "soir", "matin", "petit", "grand",
-            "fois", "peu", "beaucoup", "depuis", "pendant", "encore", "toujours",
-        }
+                                "mais", "donc", "puis", "avec", "pour", "chez", "sans", "par",
+                                "dans", "sur", "sous", "très", "bien", "oui", "non", "merci",
+                                "bonjour", "aujourd", "demain", "soir", "matin", "petit", "grand",
+                                "fois", "peu", "beaucoup", "depuis", "pendant", "encore", "toujours",
+                            }
         
         # Garbage patterns (metadata, code, formatting artifacts)
         self.noise_patterns = [
@@ -41,6 +42,8 @@ class LanguageProfile:
             (r"(?:e\.g\.|i\.e\.|et al\.|cf\.|viz\.|ibid\.)", 0.8),  # Latin abbreviations
             (r"[\u0000-\u0008\u000B\u000C\u000E-\u001F]", 1.0),  # Control characters
         ]
+# dataclass LanguageProfile 
+
 
 def is_conversational_malagasy(text: str) -> Tuple[bool, Dict[str, float]]:
     """

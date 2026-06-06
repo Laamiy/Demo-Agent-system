@@ -105,10 +105,10 @@ async def chat(    req: ChatRequest, agent: Agent, session: AsyncSession = Depen
             tool_results=tool_results if tool_results else None
         )
         
-    except Exception as e :
+    except HTTPException as e :
         logger.error(e)
         raise  
-    except HTTPException as e : 
+    except Exception as e : 
         raise HTTPException(detail = f"Exception thrown {e}" , status_code = 500)
     
 @router.get("/tools")

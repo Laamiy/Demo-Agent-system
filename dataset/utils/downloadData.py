@@ -29,4 +29,24 @@ if 0  :
             f.write(json.dumps(sample, ensure_ascii=False) + "\n")
 
     logger.info(f"Saved {len(dataset['train'])} rows to {output_path}")
-    
+
+logger.info("Downloading Alpaca for English retention...")
+alpaca = load_dataset("tatsu-lab/alpaca", split="train")
+sampled = alpaca.shuffle(seed=42).select(range(2500))
+
+with open("dataset/data/english_retention.jsonl", "w", encoding="utf-8") as f:
+    for ex in sampled:
+        instruction = ex["instruction"]
+        inp = ex["input"]
+        output = ex["output"]
+        user_content = instruction + (f"\n\n{inp}" if inp else "")
+        
+        f.write(json.dumps({
+            "messages": [
+                {"role": "system", "content": "You are a helpful assistant."},
+                {"role": "user", "content": user_content},
+                {"role": "assistant", "content": output}
+            ]
+        }, ensure_ascii=False) + "\n")
+
+logger.info("Saved 2500 English retention examples")
