@@ -1,4 +1,4 @@
-from .service import (
+from api.utils.service import (
     get_user_info,
     book_ride,
     control_keyboard,
@@ -46,7 +46,7 @@ TOOL_SCHEMAS = [
                 "properties": {
                     "restaurant_id": {"type": "string"},
                     "items": {"type": "array", "items": {"type": "string"}},
-                    "user_id": {"type": "string", "description": "Username or UUID"}
+                    "user_id": {"type": "string", "description": "username or UUID"}
                 },
                 "required": ["restaurant_id", "items", "user_id"]
             }
@@ -62,9 +62,9 @@ TOOL_SCHEMAS = [
                 "properties": {
                     "destination": {"type": "string"},
                     "pickup": {"type": "string"},
-                    "user_id": {"type": "string", "description": "UUID "}
+                    "user_name": {"type": "string", "description": " username "}
                 },
-                "required": ["destination" , "pickup" , "user_id"]
+                "required": ["destination" , "pickup" , "username"]
             }
         }
     },

@@ -1,9 +1,10 @@
+
 import re
 import json
 import torch
 from typing import List 
-from api.common.logger import logger
-from api.deps.schema import chatModel
+from common.logger import logger
+from orchestrator.model.schema import chatModel
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 
 class QwenModelAgent:
@@ -12,17 +13,17 @@ class QwenModelAgent:
         logger.info(f"Loading {model_name}...")
         
         bnb_config = BitsAndBytesConfig(
-            load_in_4bit=True,
-            bnb_4bit_compute_dtype=torch.float16,
-            bnb_4bit_quant_type="nf4",
-            bnb_4bit_use_double_quant=True,
-        )
+                                            load_in_4bit=True,
+                                            bnb_4bit_compute_dtype=torch.float16,
+                                            bnb_4bit_quant_type="nf4",
+                                            bnb_4bit_use_double_quant=True,
+                                        )
         
         self.tokenizer = AutoTokenizer.from_pretrained(
-            model_name,
-            trust_remote_code=True,
-            padding_side="left"
-        )
+                                                            model_name,
+                                                            trust_remote_code=True,
+                                                            padding_side="left"
+                                                        )
         
         self.model = AutoModelForCausalLM.from_pretrained(
             model_name,
@@ -39,8 +40,6 @@ class QwenModelAgent:
         """Generate response from messages. Returns raw text (may contain <tool_call>)."""
         messages = [ m if isinstance(m, chatModel) else chatModel(**m) for m in messages]
 
-        # messages = [asdict(mess) for mess in messages ]
-        
         text = self.tokenizer.apply_chat_template(
                                                         messages,
                                                         tools=tools,
@@ -84,7 +83,6 @@ class QwenModelAgent:
             except json.JSONDecodeError:
                 continue
         
-        # Fallback: try to find JSON objects with "name" and "arguments"
         if not calls:
             try:
                 # Look for standalone JSON that looks like a tool call
@@ -99,3 +97,4 @@ class QwenModelAgent:
                 pass
         
         return calls
+    

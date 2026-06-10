@@ -3,21 +3,13 @@ import random
 import json 
 import re 
 import subprocess
-from typing import Annotated
-from fastapi import APIRouter, Depends
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List 
-from api.deps.state import get_agent
-from api.deps.Agent import QwenModelAgent
-from api.entities.user import User, Order, Restaurant, Ride  
-from sqlalchemy import func , or_
-from api.common.logger import logger 
+from sqlalchemy import func
+from sqlalchemy import select
+from common.logger import logger 
 from sqlalchemy.ext.asyncio import AsyncSession
-router = APIRouter()
-Agent = Annotated[QwenModelAgent, Depends(get_agent)]
-# db_session = Annotated[AsyncGenerator[AsyncSession,None] , Depends(get_connection)]
-# ─── REAL TOOL IMPLEMENTATIONS (hit your actual DB) ───────
+from api.entities.user import User, Order, Restaurant, Ride  
+
 
 
 async def get_user_info(session: AsyncSession, username: str = None, phone: str = None):
@@ -144,44 +136,41 @@ async def search_restaurants(session: AsyncSession, query: str):
     }
 
 
-async def book_ride(session: AsyncSession, destination: str, pickup: str , user_id: str = None ) :#, username : str = None ):
+async def book_ride(session: AsyncSession, destination: str, pickup: str , username: str ) :
     uid = None
-    if user_id:
-        try:
-            uid = uuid.UUID(user_id)
-        except ValueError:
-            user_stmt = select(User).where( User.uid == user_id  , 
-                                           #     func.lower(User.username) == (username or "").lower()
-                                           )
-            res = await session.execute(user_stmt)
-            user = res.scalar_one_or_none()
-            if user:
-                uid = user.uid
- # Just set price to random for demo only anyway
+    user_stmt = select(User).where( func.lower(User.username) == username.strip().lower())
+    res = await session.execute(user_stmt)
+    user = res.scalar_one_or_none()
+    if user:
+        uid = user.uid
+    else : 
+        logger.warning("No id found for %s", username)  
+    # random price 
     price = random.randint(5000, 20000)
-    ride_id = uuid.uuid4()#f"RIDE-{random.randint(1000, 9999)}"
+    ride_id = uuid.uuid4()
 
     ride = Ride(
-        ride_id=ride_id,
-        user_id=uid,
-        destination=destination,
-        pickup=pickup or "Current location",
-        status="confirmed",
-        price=price,
-        currency="MGA",
-    )
+                    ride_id=ride_id,
+                    user_id=uid,
+                    destination=destination,
+                    pickup=pickup or "Current location",
+                    status="confirmed",
+                    price=price,
+                    currency="MGA",
+                )
+
     logger.info("current ride %s to %s " , ride.pickup , ride.destination)
     session.add(ride)
     await session.commit()
 
     return {
-        "ride_id": str(ride_id),
-        "status": "confirmed",
-        "destination": destination,
-        "pickup": pickup or "Current location",
-        "price": f"{price} MGA",
-        "user_id": str(uid) if uid else None,
-    }
+                "ride_id": str(ride_id),
+                "status": "confirmed",
+                "destination": destination,
+                "pickup": pickup or "Current location",
+                "price": f"{price} MGA",
+                "user_id": str(uid) if uid else None,
+            }
 
 
 def control_keyboard(state: str):
@@ -189,17 +178,20 @@ def control_keyboard(state: str):
     try:
         brightness = 255 if state == "on" else 0
         subprocess.run(
-            ["sudo","brightnessctl", "set", str(brightness)],
-            check=True,
-            capture_output=True,
-            text=True,
-        )
+                            ["sudo","brightnessctl", "set", str(brightness)],
+                            check=True,
+                            capture_output=True,
+                            text=True,
+                        )
         return {"status": "success", "device": "keyboard_backlight", "state": state}
+    
     except FileNotFoundError:
+        
         return {
-            "status": "error",
-            "message": "brightnessctl not found. Install it: sudo apt install brightnessctl"
-        }
+                    "status": "error",
+                    "message": "brightnessctl not found. Install it: sudo apt install brightnessctl"
+                }
+        
     except subprocess.CalledProcessError as e:
         return {"status": "error", "message": e.stderr}
 
@@ -234,7 +226,6 @@ def _extract_tool_calls(text: str) -> List[dict]:
     if calls:
         return calls
 
-    # Unclosed tag (model outputs <tool_call>{"name":...} without closing)
     for match in re.finditer(r'<tool_call>\s*(\{.*)', text, re.DOTALL):
         
         json_str = match.group(1)
