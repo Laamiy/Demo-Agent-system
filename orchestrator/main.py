@@ -1,16 +1,11 @@
-# orchestrator/main.py
-from enum  import Enum   
 from common.logger import logger
-from orchestrator.model.ModelService import ModelService
+
 from langchain_core.messages import HumanMessage, AIMessage
+
+from orchestrator.schema import Commands
+from orchestrator.model.ModelService import ModelService
 from orchestrator.orchestrator import build_graph, AgentState
 
-
-
-class Commands(Enum):
-    QUIT    = "quit" 
-    CLEAR   = "clear"
-    
         
 def run():
     logger.info("Starting model orchestrator...")
@@ -51,7 +46,7 @@ def run():
             response = result["response"]
             logger.info("Agent: %s", response)
 
-            #for next turn
+            # for next turn
             history.append(HumanMessage(content=user_input))
             history.append(AIMessage(content=response))
 

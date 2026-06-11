@@ -1,9 +1,9 @@
+from orchestrator.schema import AgentState
 from langchain_core.messages import AIMessage
-from common.logger import logger
 from orchestrator.model.ModelService import SYSTEM_PROMPT
 from orchestrator.model.ModelService import ModelService
 
-def chat_node(state: dict, model : ModelService) -> dict:
+def chat_node(state: AgentState, model : ModelService) -> AgentState:
     history = [
                     {
                         "role": ("user" if isinstance(m, type(state["messages"][0])) else "assistant"),

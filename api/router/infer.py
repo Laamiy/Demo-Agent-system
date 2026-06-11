@@ -4,9 +4,9 @@ from sqlalchemy import select
 from api.entities.user import User
 from api.deps.core import get_connection
 from sqlalchemy.ext.asyncio import AsyncSession
-from api.utils.tools import TOOL_FUNCTIONS, TOOL_SCHEMAS
 from fastapi import APIRouter, Depends, HTTPException
-
+from api.utils.tools import TOOL_FUNCTIONS, TOOL_SCHEMAS
+from common.logger import logger 
 
 router = APIRouter()
 
@@ -33,17 +33,20 @@ async def execute_tool(
         raise HTTPException(status_code=404, detail=f"Tool '{tool_name}' not found")
 
     func = TOOL_FUNCTIONS[tool_name]
-
+    logger.info("tool being called %s", func)
     sig  = inspect.signature(func)
-
+    logger.info("function signature : %s", sig )
     valid_names = set(sig.parameters.keys())
 
     filtered    = {k: v for k, v in params.items() if k in valid_names}
-
+    logger.info("filtered : ")
+    logger.info(filtered)
     required    = [
                         p.name for p in sig.parameters.values()
                         if p.default is inspect.Parameter.empty and p.name != "session"
                     ]
+    logger.info("required : ")
+    logger.info(required)
 
     missing = [r for r in required if r not in filtered]
 

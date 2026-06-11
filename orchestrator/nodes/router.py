@@ -1,6 +1,8 @@
 import re
 from common.logger import logger
+from orchestrator.schema import AgentState
 
+    
 ROUTER_SYSTEM = """You are an intent classifier. Reply with exactly one word:
 - tool_call  → user wants to DO something (book ride, order food, get user info)
 - chat       → user wants to talk or ask a question
@@ -8,9 +10,9 @@ ROUTER_SYSTEM = """You are an intent classifier. Reply with exactly one word:
 
 One word only. No punctuation. No explanation."""
 
-def router_node(state: dict, model) -> dict:
+def router_node(state: AgentState, model) -> AgentState:
         
-    user_message = state["messages"][-1].content
+    user_message  : str = state["messages"][-1].content
     logger.info("Routing: %s", user_message)
 
     messages = [
@@ -24,4 +26,4 @@ def router_node(state: dict, model) -> dict:
         intent = "clarify"
 
     logger.info("Intent: %s", intent)
-    return {"intent": intent}
+    return {"intent": intent }#, "messages":  messages}

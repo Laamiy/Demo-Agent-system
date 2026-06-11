@@ -1,5 +1,5 @@
 from orchestrator.model.QwenModel import QwenModelAgent
-from orchestrator.model.schema import chatModel
+from orchestrator.schema import chatModel
 
 SYSTEM_PROMPT = """You are an AI assistant. When the user asks for an action, you MUST use a tool call.
 Do not confirm, do not apologize, and do not make up results. Only the system can provide results after you call a tool.

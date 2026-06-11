@@ -1,9 +1,6 @@
 import uuid
 import random
-import json 
-import re 
 import subprocess
-from typing import List 
 from sqlalchemy import func
 from sqlalchemy import select
 from common.logger import logger 
@@ -30,113 +27,107 @@ async def get_user_info(session: AsyncSession, username: str = None, phone: str 
         raise ValueError(f"User not found: {username or phone}")
 
     return {
-        "user_id": str(user.uid),
-        "username": user.username,
-        "email": user.email,
-        "phone": user.phone,
-        "address": user.address,
-    }
+                "user_id": str(user.uid),
+                "username": user.username,
+                "email": user.email,
+                "phone": user.phone,
+                "address": user.address,
+            }
 
 
-async def get_user_orders(session: AsyncSession, user_id: str):
-    # Try UUID first, fallback to username
-    try:
-        uid = uuid.UUID(user_id)
-    except ValueError:
-        user_stmt = select(User).where(User.username == user_id)
-        res = await session.execute(user_stmt)
-        user = res.scalar_one_or_none()
-        if not user:
-            raise ValueError(f"User not found: {user_id}")
-        uid = user.uid
+async def get_user_orders(session: AsyncSession, username: str):
+
+    user_stmt = select(User).where(func.lower( User.username )== username.strip().lower())
+    res = await session.execute(user_stmt)
+    user = res.scalar_one_or_none()
+    if not user:
+        raise ValueError("User with username : %s not found ", username)
+    uid = user.uid
 
     stmt = select(Order).where(Order.user_id == uid).order_by(Order.created_at.desc())
     result = await session.execute(stmt)
     orders = result.scalars().all()
-
-    return {
-        "orders": [
-            {
-                "order_id": o.order_id,
-                "item": o.item,
-                "status": o.status,
-                "total": o.total,
-                "currency": o.currency,
-                "created_at": o.created_at.isoformat() if o.created_at else None,
+    if orders : 
+        return {
+                "orders": [
+                                {
+                                    "order_id": o.order_id,
+                                    "item": o.item,
+                                    "status": o.status,
+                                    "total": o.total,
+                                    "currency": o.currency,
+                                    "created_at": o.created_at.isoformat() if o.created_at else None,
+                                }
+                                for o in orders
+                            ]
             }
-            for o in orders
-        ]
-    }
+    return  {"orders" : []}
 
-
-async def place_order(session: AsyncSession, restaurant_id: str, items: list, user_id: str):
-    # Resolve user
-    try:
-        uid = uuid.UUID(user_id)
-    except ValueError:
-        user_stmt = select(User).where(User.user_id == user_id)
-        res = await session.execute(user_stmt)
-        user = res.scalar_one_or_none()
-        if not user:
-            raise ValueError(f"User not found: {user_id}")
-        uid = user.uid
-
-    # Verify restaurant exists
-    rest_stmt = select(Restaurant).where(Restaurant.id == restaurant_id)
+async def place_order(session: AsyncSession, restaurantname: str, items: list, username: str):
+    
+# Resolve user
+    user_stmt = select(User).where(func.lower(User.username) == username.strip().lower())
+    res = await session.execute(user_stmt)
+    user = res.scalar_one_or_none()
+    if not user:
+        raise ValueError("User with username : %s not found ", username)
+    uid = user.uid
+    
+# Resolve Restaurant
+    rest_stmt = select(Restaurant).where(func.lower(Restaurant.name) == restaurantname.strip().lower())
     rest_res = await session.execute(rest_stmt)
     restaurant = rest_res.scalar_one_or_none()
     if not restaurant:
-        raise ValueError(f"Restaurant not found: {restaurant_id}")
+        raise ValueError("User with username : %s not found ", restaurantname)
 
-    # NOTE: Your Order.item is String(255). If items list is long, it may truncate.
-    # Consider changing item to Text or adding an OrderItem table later.
     total = len(items) * 15000  # placeholder pricing until you parse restaurant.menu JSON
 
     order_id = f"ORD-{uuid.uuid4().hex[:8].upper()}"
     new_order = Order(
-        order_id=order_id,
-        user_id=uid,
-        item=", ".join(items),
-        status="confirmed",
-        total=total,
-        currency="MGA",
-    )
+                            order_id=order_id,
+                            user_id=uid,
+                            item=", ".join(items),
+                            status="confirmed",
+                            total=total,
+                            currency="MGA",
+                        )
+    
     session.add(new_order)
-    # await session.commit()
 
     return {
-        "order_id": order_id,
-        "status": "confirmed",
-        "items": items,
-        "restaurant": restaurant.name,
-        "total": total,
-        "currency": "MGA",
-    }
+                "order_id": order_id,
+                "status": "confirmed",
+                "items": items,
+                "restaurant": restaurant.name,
+                "total": total,
+                "currency": "MGA",
+            }
 
 
 async def search_restaurants(session: AsyncSession, query: str):
     stmt = select(Restaurant).where(
-        (Restaurant.name.ilike(f"%{query}%")) |
-        (Restaurant.cuisine.ilike(f"%{query}%"))
-    )
+                                        (Restaurant.name.ilike(f"%{query}%")) |
+                                        (Restaurant.cuisine.ilike(f"%{query}%"))
+                                    )
     result = await session.execute(stmt)
     rows = result.scalars().all()
 
     return {
-        "results": [
-            {
-                "id": r.id,
-                "name": r.name,
-                "cuisine": r.cuisine,
-                "rating": r.rating,
-                "delivery_time": r.delivery_time,
+                "results": [
+                    {
+                        "id": r.id,
+                        "name": r.name,
+                        "cuisine": r.cuisine,
+                        "rating": r.rating,
+                        "delivery_time": r.delivery_time,
+                    }
+                    for r in rows
+                ]
             }
-            for r in rows
-        ]
-    }
 
 
 async def book_ride(session: AsyncSession, destination: str, pickup: str , username: str ) :
+    logger.info("destination : %s , pickup : %s , username : %s" , destination , pickup , username)
     uid = None
     user_stmt = select(User).where( func.lower(User.username) == username.strip().lower())
     res = await session.execute(user_stmt)
@@ -173,8 +164,10 @@ async def book_ride(session: AsyncSession, destination: str, pickup: str , usern
             }
 
 
-def control_keyboard(state: str):
-    """Real keyboard backlight control. Linux (brightnessctl)."""
+def control_screen_backlight(state: str):
+    """ Real screen backlight control. 
+        Linux (brightnessctl).
+    """
     try:
         brightness = 255 if state == "on" else 0
         subprocess.run(
@@ -195,73 +188,6 @@ def control_keyboard(state: str):
     except subprocess.CalledProcessError as e:
         return {"status": "error", "message": e.stderr}
 
-def _normalize_call(data: dict) -> dict:
-    """Normalize Qwen tool-call formats."""
-    name = data.get("name")
-    if not name and "function" in data:
-        name = data["function"].get("name")
-
-    args = data.get("arguments") or data.get("parameters") or {}
-    if "function" in data and isinstance(data["function"], dict):
-        args = data["function"].get("arguments", args)
-
-    return {"name": name, "arguments": args}
-
-
-def _extract_tool_calls(text: str) -> List[dict]:
-    """
-    Extract tool calls from raw model output.
-    Handles both closed <tool_call>...</tool_call> and unclosed tags.
-    """
-    calls = []
-
-    for match in re.finditer(r'<tool_call>(.*?)</tool_call>', text, re.DOTALL):
-        try:
-            data = json.loads(match.group(1).strip())
-            calls.append(_normalize_call(data))
-            
-        except (json.JSONDecodeError, KeyError):
-            continue
-
-    if calls:
-        return calls
-
-    for match in re.finditer(r'<tool_call>\s*(\{.*)', text, re.DOTALL):
-        
-        json_str = match.group(1)
-        brace_count = 0
-        end_idx = 0
-        in_string = False
-        escape_next = False
-
-        for i, ch in enumerate(json_str):
-            if escape_next:
-                escape_next = False
-                continue
-            if ch == '\\':
-                escape_next = True
-                continue
-            if ch == '"' and not in_string:
-                in_string = True
-            elif ch == '"' and in_string:
-                in_string = False
-            elif not in_string:
-                if ch == '{':
-                    brace_count += 1
-                elif ch == '}':
-                    brace_count -= 1
-                    if brace_count == 0:
-                        end_idx = i + 1
-                        break
-
-        if end_idx > 0:
-            try:
-                data = json.loads(json_str[:end_idx])
-                calls.append(_normalize_call(data))
-            except (json.JSONDecodeError, KeyError):
-                continue
-
-    return calls
 
 
 

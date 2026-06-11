@@ -4,12 +4,12 @@ import json
 import torch
 from typing import List 
 from common.logger import logger
-from orchestrator.model.schema import chatModel
+from orchestrator.schema import chatModel
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 
 class QwenModelAgent:
     
-    def __init__(self, model_name: str = "models/Qwen2.5-1.5B-Instruct"):
+    def __init__(self, model_name: str = "models/Qwen2.5-3B-Instruct"):
         logger.info(f"Loading {model_name}...")
         
         bnb_config = BitsAndBytesConfig(
@@ -38,31 +38,37 @@ class QwenModelAgent:
     
     def chat(self, messages: List[chatModel], tools: list = None, max_new_tokens: int = 512) -> str:
         """Generate response from messages. Returns raw text (may contain <tool_call>)."""
-        messages = [ m if isinstance(m, chatModel) else chatModel(**m) for m in messages]
-
+        
+        # Convert chatModel instances to plain dicts for the tokenizer
+        dict_messages = [
+                            {"role": m.role, "content": m.content}
+                            for m in messages
+                        ]
+        
         text = self.tokenizer.apply_chat_template(
-                                                        messages,
+                                                        dict_messages,
                                                         tools=tools,
                                                         tokenize=False,
                                                         add_generation_prompt=True
                                                     )
+        
         inputs = self.tokenizer(text, return_tensors="pt").to(self.model.device)
         
         with torch.no_grad():
             outputs = self.model.generate(
-                **inputs,
-                max_new_tokens=max_new_tokens,
-                do_sample=True,
-                temperature=0.7,
-                top_p=0.9,
-                pad_token_id=self.tokenizer.pad_token_id,
-                eos_token_id=self.tokenizer.eos_token_id,
-            )
+                                            **inputs,
+                                            max_new_tokens=max_new_tokens,
+                                            do_sample=True,
+                                            temperature=0.7,
+                                            top_p=0.9,
+                                            pad_token_id=self.tokenizer.pad_token_id,
+                                            eos_token_id=self.tokenizer.eos_token_id,
+                                        )
         
         return self.tokenizer.decode(
-            outputs[0][inputs.input_ids.shape[1]:], 
-            skip_special_tokens=True
-        )
+                                        outputs[0][inputs.input_ids.shape[1]:], 
+                                        skip_special_tokens=True
+                                    )
     
     def parse_tool_calls(self, text: str) -> list[dict]:
         """
