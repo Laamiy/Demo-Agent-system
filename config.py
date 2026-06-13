@@ -1,5 +1,6 @@
 from functools import lru_cache
 from pydantic_settings import SettingsConfigDict , BaseSettings 
+from pydantic import SecretStr
 
 class SharedConfigSettings(BaseSettings):
     model_config = SettingsConfigDict(
@@ -24,12 +25,19 @@ class appSettings(SharedConfigSettings):
 class dataBaseSettings(SharedConfigSettings):
     model_config = SettingsConfigDict(env_prefix="PG_")
     CONNECTION_STR  :str  
-    
+
+class agentSettings(SharedConfigSettings):
+    model_config = SettingsConfigDict(env_prefix="AGENT_")
+    SUDO_PASSWORD :SecretStr  
+    WORKSPACE : str 
+
+
 class Settings(): 
     def __init__(self,):
-        self.app   = appSettings()
-        self.model = modelSettings()
+        self.app      = appSettings()
+        self.model    = modelSettings()
         self.database = dataBaseSettings()
+        self.agent    = agentSettings()
 
 @lru_cache
 def get_settings() -> Settings : 

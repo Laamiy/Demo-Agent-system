@@ -3,10 +3,11 @@ import json
 import httpx
 from config import get_settings
 from common.logger import logger
-from api.utils.tools import TOOL_SCHEMAS
+from orchestrator.tools.registry import API_TOOL_SCHEMAS
 from orchestrator.schema import AgentState
 from langchain_core.messages import AIMessage, HumanMessage
-from orchestrator.model.ModelService import SYSTEM_PROMPT, ModelService
+from orchestrator.model.ModelService import ModelService
+from orchestrator.model.prompt import SYSTEM_PROMPT
 
 settings = get_settings()
 BACKEND_URL = f"http://{settings.app.HOST}:{settings.app.PORT}" 
@@ -28,7 +29,7 @@ def tool_call_node(state: AgentState, model: ModelService) -> AgentState:
                 )
 
     # available tools to the model  : 
-    raw = model.generate(messages, tools=TOOL_SCHEMAS)
+    raw = model.generate(messages, tools=API_TOOL_SCHEMAS)
     # logger.info("Tool generation: %s", raw[:200])
 
     match = re.search(r"<tool_call>(.*?)</tool_call>", raw, re.DOTALL)
@@ -71,7 +72,7 @@ def tool_call_node(state: AgentState, model: ModelService) -> AgentState:
     messages.append({"role": "assistant", "content": raw})
     messages.append({"role": "tool", "content": json.dumps(tool_result), "name": tool_name})
 
-    final_reply = model.generate(messages, tools=TOOL_SCHEMAS)
+    final_reply = model.generate(messages, tools=API_TOOL_SCHEMAS)
     logger.info("Final reply: %s", final_reply[:120])
 
     return {

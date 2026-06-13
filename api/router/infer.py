@@ -5,7 +5,7 @@ from api.entities.user import User
 from api.deps.core import get_connection
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import APIRouter, Depends, HTTPException
-from api.utils.tools import TOOL_FUNCTIONS, TOOL_SCHEMAS
+from api.utils.tools import TOOL_FUNCTIONS
 from common.logger import logger 
 
 router = APIRouter()
@@ -18,9 +18,6 @@ async def health(session: AsyncSession = Depends(get_connection)):
                 "db_ready": res.scalars().one() is not None,
             }
 
-@router.get("/tools")
-async def list_tools():
-    return {"tools": TOOL_SCHEMAS}
 
 @router.post("/tool/{tool_name}")
 async def execute_tool(

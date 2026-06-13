@@ -164,29 +164,29 @@ async def book_ride(session: AsyncSession, destination: str, pickup: str , usern
             }
 
 
-def control_screen_backlight(state: str):
-    """ Real screen backlight control. 
-        Linux (brightnessctl).
-    """
-    try:
-        brightness = 255 if state == "on" else 0
-        subprocess.run(
-                            ["sudo","brightnessctl", "set", str(brightness)],
-                            check=True,
-                            capture_output=True,
-                            text=True,
-                        )
-        return {"status": "success", "device": "keyboard_backlight", "state": state}
+# def control_screen_backlight(state: str):
+#     """ Real screen backlight control. 
+#         Linux (brightnessctl).
+#     """
+#     try:
+#         brightness = 255 if state == "on" else 0
+#         subprocess.run(
+#                             ["sudo","brightnessctl", "set", str(brightness)],
+#                             check=True,
+#                             capture_output=True,
+#                             text=True,
+#                         )
+#         return {"status": "success", "device": "keyboard_backlight", "state": state}
     
-    except FileNotFoundError:
+#     except FileNotFoundError:
         
-        return {
-                    "status": "error",
-                    "message": "brightnessctl not found. Install it: sudo apt install brightnessctl"
-                }
+#         return {
+#                     "status": "error",
+#                     "message": "brightnessctl not found. Install it: sudo apt install brightnessctl"
+#                 }
         
-    except subprocess.CalledProcessError as e:
-        return {"status": "error", "message": e.stderr}
+#     except subprocess.CalledProcessError as e:
+#         return {"status": "error", "message": e.stderr}
 
 
 
